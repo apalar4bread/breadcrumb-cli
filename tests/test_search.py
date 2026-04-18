@@ -44,6 +44,14 @@ def test_search_steps_by_command_not_found(sessions):
     assert results == []
 
 
+def test_search_steps_by_command_multiple_matches(sessions):
+    # both sessions have steps that contain 'python' or common terms;
+    # use a term present in multiple steps across sessions
+    results = search_steps_by_command(sessions, "python")
+    assert len(results) == 1
+    assert "python" in results[0][1].command
+
+
 def test_search_steps_by_note_found(sessions):
     results = search_steps_by_note(sessions, "deps")
     assert len(results) == 1
@@ -55,6 +63,14 @@ def test_search_steps_by_note_no_note_field(sessions):
     # steps without a note should not raise
     results = search_steps_by_note(sessions, "git")
     assert results == []
+
+
+def test_search_steps_by_note_matches_multiple(sessions):
+    # both noted steps contain the letter 'a' but let's use a shared substring
+    results = search_steps_by_note(sessions, "config")
+    assert len(results) == 1
+    _, step = results[0]
+    assert step.metadata["note"] == "apply k8s config"
 
 
 def test_search_sessions_by_name(sessions):
