@@ -53,6 +53,12 @@ def test_annotate_step_out_of_range_raises():
         annotate_step(s, 10, "oops")
 
 
+def test_annotate_step_negative_index_raises():
+    s = make_session()
+    with pytest.raises(AnnotateError):
+        annotate_step(s, -1, "negative")
+
+
 def test_clear_annotation_removes_comment():
     s = make_session()
     annotate_step(s, 0, "some note")
@@ -93,3 +99,11 @@ def test_list_annotated_returns_correct_indices():
     annotate_step(s, 2, "third")
     result = list_annotated(s)
     assert [i for i, _ in result] == [0, 2]
+
+
+def test_list_annotated_returns_correct_comments():
+    s = make_session()
+    annotate_step(s, 0, "first")
+    annotate_step(s, 2, "third")
+    result = list_annotated(s)
+    assert [comment for _, comment in result] == ["first", "third"]
