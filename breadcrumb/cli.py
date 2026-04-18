@@ -1,8 +1,9 @@
+"""CLI entry point for breadcrumb."""
 import click
-from breadcrumb.session import Session
 from breadcrumb.store import SessionStore
 from breadcrumb.exporter import export_to_script, write_script
-from breadcrumb.replayer import replay_session
+from breadcrumb.formatter import format_session, format_session_list
+from breadcrumb.tagger import add_tag, remove_tag, list_tags, find_by_tag
 
 store = SessionStore()
 
@@ -10,52 +11,49 @@ store = SessionStore()
 @click.group()
 def cli():
     """breadcrumb — track and replay terminal sessions."""
-    pass
 
 
 @cli.command()
 @click.argument("name")
 def new(name):
     """Create a new session."""
+    from breadcrumb.session import Session
     session = Session(name=name)
     store.save(session)
-    click.echo(f"Created session '{name}' ({session.id})")
+    click.echo(f"Created session: {name}")
 
 
 @cli.command()
-@click.argument("session_id")
+@click.argument("session_name")
 @click.argument("command")
-@click.option("--note", default=None, help="Optional note for this step.")
-def add(session_id, command, note):
+@click.option("--desc", default="", help="Step description")
+def add(session_name, command, desc):
     """Add a step to a session."""
-    session = store.load(session_id)
-    if session is None:
-        click.echo(f"Session '{session_id}' not found.", err=True)
-        raise Systemmetadata = {"note": note} if note else {}
-    session.add_step(command, metadata=metadata)
+    session = store.load(session_name)
+    if not session:
+        click.echo(f"Session '{session_name}' not found.", err=True)
+        raise SystemExit(1)
+    session.add_step(command, description=desc)
     store.save(session)
-    click.echo(f"Added step: {command}")
+    click.echo(f"Added step to '{session_name}': {command}")
 
 
 @cli.command(name="list")
 def list_sessions():
     """List all sessions."""
-    sessions = store.list_sessions()
-    if not sessions:
-        click.echo("No sessions found.")
-        return
-    for s in sessions:
-        click.echo(f"{s['id']}  {s['name']}  ({s['step_count']} steps)")
+    sessions = [store.load(n) for n in store.list_sessions()]
+    sessions = [s for s in sessions if s]
+    click.echo(format_session_list(sessions))
 
 
 @cli.command()
-@click.argument("session_id")
-@click.option("--output", "-o", default=None, help="Output file path.")
-def export(session_id, output):
+@click.argument("session_name")
+@click.option("--output", "-o", default=None, help="Output file path")
+def export(session_name, output):
     """Export a session as a shell script."""
-    session = store.load(session_id)
-    if session is None:
-        click.echo(f"Session '{session_id}' not found.", err=True)
+    session = store.load(session_name)
+    if not session:
+        click.echo(f"Session '{session_name}' not found.", err=True)
         raise SystemExit(1)
     script = export_to_script(session)
     if output:
@@ -66,26 +64,42 @@ def export(session_id, output):
 
 
 @cli.command()
-@click.argument("session_id")
-@click.option("--dry-run", is_flag=True, default=False, help="Print commands without running them.")
-@click.option("--delay", default=0.5, show_default=True, help="Seconds between steps.")
-@click.option("--no-stop-on-error", is_flag=True, default=False, help="Continue even if a step fails.")
-def replay(session_id, dry_run, delay, no_stop_on_error):
-    """Replay all steps in a session."""
-    session = store.load(session_id)
-    if session is None:
-        click.echo(f"Session '{session_id}' not found.", err=True)
+@click.argument("session_name")
+@click.argument("tag")
+def tag(session_name, tag):
+    """Add a tag to a session."""
+    session = store.load(session_name)
+    if not session:
+        click.echo(f"Session '{session_name}' not found.", err=True)
         raise SystemExit(1)
+    add_tag(session, tag)
+    store.save(session)
+    click.echo(f"Tagged '{session_name}' with '{tag.strip().lower()}'")
 
-    click.echo(f"Replaying session '{session.name}' ({len(session.steps)} steps)...")
-    results = replay_session(
-        session,
-        dry_run=dry_run,
-        delay=delay,
-        stop_on_error=not no_stop_on_error,
-    )
-    failed = [r for r in results if r["returncode"] != 0]
-    click.echo(f"Done. {len(results)} step(s) run, {len(failed)} failed.")
+
+@cli.command()
+@click.argument("session_name")
+@click.argument("tag")
+def untag(session_name, tag):
+    """Remove a tag from a session."""
+    session = store.load(session_name)
+    if not session:
+        click.echo(f"Session '{session_name}' not found.", err=True)
+        raise SystemExit(1)
+    remove_tag(session, tag)
+    store.save(session)
+    click.echo(f"Removed tag '{tag.strip().lower()}' from '{session_name}'")
+
+
+@cli.command(name="find-tag")
+@click.argument("tag")
+def find_tag(tag):
+    """Find sessions by tag."""
+    results = find_by_tag(store, tag)
+    if not results:
+        click.echo(f"No sessions found with tag '{tag}'.")
+    else:
+        click.echo(format_session_list(results))
 
 
 if __name__ == "__main__":

@@ -1,53 +1,64 @@
-"""Core session tracking module for breadcrumb-cli."""
-
-import os
-import json
-import time
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional
+"""Session and Step data models."""
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+import uuid
 
 
 @dataclass
 class Step:
     command: str
-    timestamp: float
-    cwd: str
-    exit_code: Optional[int] = None
-    note: Optional[str] = None
+    description: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-    def to_dict(self):
-        return asdict(self)
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "command": self.command,
+            "description": self.description,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp,
+        }
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return cls(**data)
+    def from_dict(cls, data: Dict[str, Any]) -> "Step":
+        return cls(
+            command=data["command"],
+            description=data.get("description", ""),
+            metadata=data.get("metadata", {}),
+            timestamp=data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+        )
 
 
 @dataclass
 class Session:
     name: str
-    created_at: float = field(default_factory=time.time)
     steps: List[Step] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-    def add_step(self, command: str, cwd: Optional[str] = None, exit_code: Optional[int] = None, note: Optional[str] = None):
-        step = Step(
-            command=command,
-            timestamp=time.time(),
-            cwd=cwd or os.getcwd(),
-            exit_code=exit_code,
-            note=note,
-        )
+    def add_step(self, command: str, description: str = "", metadata: Optional[Dict[str, Any]] = None) -> Step:
+        step = Step(command=command, description=description, metadata=metadata or {})
         self.steps.append(step)
         return step
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
+            "id": self.id,
             "name": self.name,
-            "created_at": self.created_at,
             "steps": [s.to_dict() for s in self.steps],
+            "tags": self.tags,
+            "created_at": self.created_at,
         }
 
     @classmethod
-    def from_dict(cls, data: dict):
-        steps = [Step.from_dict(s) for s in data.get("steps", [])]
-        return cls(name=data["name"], created_at=data["created_at"], steps=steps)
+    def from_dict(cls, data: Dict[str, Any]) -> "Session":
+        session = cls(
+            name=data["name"],
+            id=data.get("id", str(uuid.uuid4())),
+            created_at=data.get("created_at", datetime.now(timezone.utc).isoformat()),
+            tags=data.get("tags", []),
+        )
+        session.steps = [Step.from_dict(s) for s in data.get("steps", [])]
+        return session
