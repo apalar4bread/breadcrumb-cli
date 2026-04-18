@@ -32,6 +32,14 @@ def test_find_duplicate_case_insensitive():
     assert len(dupes) == 1
 
 
+def test_find_multiple_duplicates():
+    s = make_session(["ls", "pwd", "ls", "pwd"])
+    dupes = find_duplicate_steps(s)
+    assert len(dupes) == 2
+    assert (0, 2) in dupes
+    assert (1, 3) in dupes
+
+
 def test_remove_duplicates_keep_first():
     s = make_session(["ls", "pwd", "ls", "pwd"])
     result = remove_duplicate_steps(s, keep="first")
