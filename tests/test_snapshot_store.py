@@ -38,6 +38,11 @@ def test_list_snapshots(store):
     assert set(labels) == {"alpha", "beta"}
 
 
+def test_list_snapshots_empty(store):
+    """list_snapshots should return an empty list for unknown session ids."""
+    assert store.list_snapshots("nonexistent") == []
+
+
 def test_delete_snapshot(store):
     store.save(make_snap(), "v1")
     assert store.delete("s1", "v1") is True
@@ -46,3 +51,13 @@ def test_delete_snapshot(store):
 
 def test_delete_missing_returns_false(store):
     assert store.delete("s1", "nope") is False
+
+
+def test_overwrite_snapshot(store):
+    """Saving with the same label should overwrite the previous snapshot."""
+    store.save(make_snap("s1", n=2), "v1")
+    store.save(make_snap("s1", n=5), "v1")
+    loaded = store.load("s1", "v1")
+    assert len(loaded.steps) == 5
+    # label should still appear only once
+    assert store.list_snapshots("s1").count("v1") == 1
