@@ -74,3 +74,11 @@ def test_group_steps_dispatches_correctly():
     s = make_session(make_step("echo hi", note="greet"))
     assert "echo" in group_steps(s, "command")
     assert "greet" in group_steps(s, "note")
+
+
+def test_group_steps_empty_session():
+    """Grouping an empty session should return an empty dict for all strategies."""
+    s = make_session()
+    for key in ("command", "note", "label", "tag"):
+        groups = group_steps(s, key)
+        assert groups == {}, f"expected empty groups for strategy '{key}', got {groups}"
