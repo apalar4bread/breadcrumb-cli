@@ -41,3 +41,14 @@ class SnapshotStore:
             p.unlink()
             return True
         return False
+
+    def rename(self, session_id: str, old_label: str, new_label: str) -> Path:
+        """Rename a snapshot label. Returns the new path."""
+        old_path = self._path(session_id, old_label)
+        if not old_path.exists():
+            raise FileNotFoundError(f"No snapshot '{old_label}' for session {session_id}.")
+        new_path = self._path(session_id, new_label)
+        if new_path.exists():
+            raise FileExistsError(f"A snapshot named '{new_label}' already exists for session {session_id}.")
+        old_path.rename(new_path)
+        return new_path
