@@ -41,3 +41,16 @@ def find_by_label(session, label: str) -> list[tuple[int, object]]:
         (i, s) for i, s in enumerate(session.steps)
         if s.metadata.get(_META_KEY) == label
     ]
+
+
+def label_summary(session) -> dict[str, int]:
+    """Return a count of steps per label across the session.
+
+    Unlabelled steps are not included in the result.
+    """
+    summary: dict[str, int] = {}
+    for step in session.steps:
+        label = step.metadata.get(_META_KEY)
+        if label is not None:
+            summary[label] = summary.get(label, 0) + 1
+    return summary
