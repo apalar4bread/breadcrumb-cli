@@ -7,8 +7,9 @@ from breadcrumb.validator import validate_session, format_validation_result
 
 @click.command("validate")
 @click.argument("session_id")
+@click.option("--quiet", "-q", is_flag=True, help="Only output on failure.")
 @click.pass_context
-def validate_cmd(ctx, session_id):
+def validate_cmd(ctx, session_id, quiet):
     """Validate a session for integrity issues."""
     store: SessionStore = ctx.obj["store"]
     session = store.load(session_id)
@@ -18,7 +19,9 @@ def validate_cmd(ctx, session_id):
         return
 
     result = validate_session(session)
-    click.echo(format_validation_result(result))
+
+    if not quiet or not result.valid:
+        click.echo(format_validation_result(result))
 
     if not result.valid:
         ctx.exit(2)
