@@ -1,6 +1,12 @@
+import pytest
 import click
 from breadcrumb.tagger_register import register
 from breadcrumb.tagger_cli import tag_cmd
+
+
+@click.group()
+def cli():
+    pass
 
 
 def test_register_adds_tag_command():
@@ -27,5 +33,6 @@ def test_register_does_not_duplicate():
         pass
 
     register(cli)
-    # registering twice would raise, so just check it's there once
-    assert len([k for k in cli.commands if k == "tag"]) == 1
+    register(cli)
+    # Should still only have one 'tag' entry
+    assert list(cli.commands.keys()).count("tag") == 1
