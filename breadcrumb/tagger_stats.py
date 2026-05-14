@@ -1,70 +1,51 @@
-"""Compute statistics about tag usage across sessions."""
 from __future__ import annotations
-
-from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, List
+from collections import Counter
+from typing import List, Dict
 
 from breadcrumb.session import Session
 
 
 @dataclass
 class TagStats:
-    total_tags: int
-    unique_tags: int
-    tag_counts: Dict[str, int]
-    most_common: List[tuple]
-    sessions_with_tags: int
-    sessions_without_tags: int
+    total_tags: int = 0
+    unique_tags: int = 0
+    tag_counts: Dict[str, int] = field(default_factory=dict)
+    most_common: List[tuple] = field(default_factory=list)
+    sessions_with_tags: int = 0
+    sessions_without_tags: int = 0
 
 
 def compute_tag_stats(sessions: List[Session]) -> TagStats:
-    """Compute tag usage statistics across a list of sessions."""
-    if not sessions:
-        return TagStats(
-            total_tags=0,
-            unique_tags=0,
-            tag_counts={},
-            most_common=[],
-            sessions_with_tags=0,
-            sessions_without_tags=0,
-        )
-
     counter: Counter = Counter()
-    sessions_with_tags = 0
-    sessions_without_tags = 0
+    sessions_with = 0
+    sessions_without = 0
 
     for session in sessions:
-        tags = session.metadata.get("tags", [])
-        if isinstance(tags, list) and tags:
-            sessions_with_tags += 1
+        tags = getattr(session, "tags", []) or []
+        if tags:
+            sessions_with += 1
             for tag in tags:
                 counter[tag.lower()] += 1
         else:
-            sessions_without_tags += 1
-
-    tag_counts = dict(counter)
-    total_tags = sum(counter.values())
-    unique_tags = len(counter)
-    most_common = counter.most_common(5)
+            sessions_without += 1
 
     return TagStats(
-        total_tags=total_tags,
-        unique_tags=unique_tags,
-        tag_counts=tag_counts,
-        most_common=most_common,
-        sessions_with_tags=sessions_with_tags,
-        sessions_without_tags=sessions_without_tags,
+        total_tags=sum(counter.values()),
+        unique_tags=len(counter),
+        tag_counts=dict(counter),
+        most_common=counter.most_common(5),
+        sessions_with_tags=sessions_with,
+        sessions_without_tags=sessions_without,
     )
 
 
 def format_tag_stats(stats: TagStats) -> str:
-    """Format tag statistics into a human-readable string."""
     lines = [
         f"Total tag usages : {stats.total_tags}",
         f"Unique tags      : {stats.unique_tags}",
-        f"Tagged sessions  : {stats.sessions_with_tags}",
-        f"Untagged sessions: {stats.sessions_without_tags}",
+        f"Sessions w/ tags : {stats.sessions_with_tags}",
+        f"Sessions w/o tags: {stats.sessions_without_tags}",
     ]
     if stats.most_common:
         lines.append("Top tags:")
