@@ -8,12 +8,12 @@ from breadcrumb.session import Session
 
 @dataclass
 class TagStats:
-    total_tags: int = 0
-    unique_tags: int = 0
-    tag_counts: Dict[str, int] = field(default_factory=dict)
-    most_common: List[tuple] = field(default_factory=list)
-    sessions_with_tags: int = 0
-    sessions_without_tags: int = 0
+    total_tags: int
+    unique_tags: int
+    tag_counts: Dict[str, int]
+    most_common: List[tuple]
+    sessions_with_tags: int
+    sessions_without_tags: int
 
 
 def compute_tag_stats(sessions: List[Session]) -> TagStats:
@@ -30,11 +30,15 @@ def compute_tag_stats(sessions: List[Session]) -> TagStats:
         else:
             sessions_without += 1
 
+    total = sum(counter.values())
+    unique = len(counter)
+    most_common = counter.most_common(5)
+
     return TagStats(
-        total_tags=sum(counter.values()),
-        unique_tags=len(counter),
+        total_tags=total,
+        unique_tags=unique,
         tag_counts=dict(counter),
-        most_common=counter.most_common(5),
+        most_common=most_common,
         sessions_with_tags=sessions_with,
         sessions_without_tags=sessions_without,
     )
@@ -42,10 +46,10 @@ def compute_tag_stats(sessions: List[Session]) -> TagStats:
 
 def format_tag_stats(stats: TagStats) -> str:
     lines = [
-        f"Total tag usages : {stats.total_tags}",
-        f"Unique tags      : {stats.unique_tags}",
-        f"Sessions w/ tags : {stats.sessions_with_tags}",
-        f"Sessions w/o tags: {stats.sessions_without_tags}",
+        f"Total tags used   : {stats.total_tags}",
+        f"Unique tags       : {stats.unique_tags}",
+        f"Sessions with tags: {stats.sessions_with_tags}",
+        f"Sessions no tags  : {stats.sessions_without_tags}",
     ]
     if stats.most_common:
         lines.append("Top tags:")
